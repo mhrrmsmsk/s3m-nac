@@ -1,0 +1,106 @@
+version: '3.8'
+
+networks:
+  nac-network:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: nac-postgres
+    environment:
+       POSTGRES_USER: ${POSTGRES_USER}
+       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      -"${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - nac-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 305ss
+      retries: 5
+    restart: unless-stopped
+  
+  redis:
+    image: redis:8-alpine
+    container_name: nac-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - nac-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  
+  freeradius:
+    image: freeradius/freeradius-server:latest-3.2
+    container_name: nac-freeradius
+    ports:
+      - "${RADIUS_AUTH_PORT}:1812/udp"
+      - "${RADIUS_ACCT_PORT}:1813/udp"
+    volumes:
+      - ./freeradius/config/raddb:/etc/raddb
+      - ./freeradius/logs:/var/log/radius
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=${POSTGRES_USER}
+      - PG_PASSWORD=${POSTGRES_PASSWORD}
+      - PG_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthly
+      redis:
+        condition: service_healthly
+    networks:
+      - nac-network
+    healthcheck:
+      test: ["CMD", "radtest", "test", "test", "localhost", "0", "${RADIUS_SECRET}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    container_name: nac-api
+    ports:
+      - "${API_PORT}:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${API_SECRET_KEY}
+    volumes:
+      -./api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nac-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
