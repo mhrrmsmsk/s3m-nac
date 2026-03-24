@@ -1,0 +1,18 @@
+rest {
+    connect_uri = "http://api:8000"
+    pool {
+        start = 0
+        min = 3
+        max = 32
+        spare = 10
+        uses = 0
+        lifetime = 0
+        idle_timeout = 60
+    }
+    accounting {
+        uri = "${..connect_uri}/accounting"
+        method = "post"
+        body = "json"
+        data = '{"username":"%{User-Name}","session_id":"%{Acct-Session-Id}","status_type":"%{Acct-Status-Type}","nas_ip":"%{NAS-IP-Address}","session_time":"%{%{Acct-Session-Time}:-0}"}'
+    }
+}

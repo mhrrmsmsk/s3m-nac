@@ -9,11 +9,11 @@ services:
     image: postgres:18-alpine
     container_name: nac-postgres
     environment:
-       POSTGRES_USER: ${POSTGRES_USER}
-       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-       POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      -"${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT}:5432"  
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d
@@ -22,7 +22,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
-      timeout: 305ss
+      timeout: 5s 
       retries: 5
     restart: unless-stopped
   
@@ -37,7 +37,7 @@ services:
     networks:
       - nac-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"] 
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,12 +46,13 @@ services:
   freeradius:
     image: freeradius/freeradius-server:latest-3.2
     container_name: nac-freeradius
+    platform: linux/amd64
+    command: freeradius -X -f
     ports:
       - "${RADIUS_AUTH_PORT}:1812/udp"
       - "${RADIUS_ACCT_PORT}:1813/udp"
     volumes:
-      - ./freeradius/config/raddb:/etc/raddb
-      - ./freeradius/logs:/var/log/radius
+      - ./freeradius/config/raddb:/etc/freeradius
     environment:
       - PG_HOST=postgres
       - PG_PORT=5432
@@ -63,13 +64,13 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       postgres:
-        condition: service_healthly
+        condition: service_healthy
       redis:
-        condition: service_healthly
+        condition: service_healthy
     networks:
       - nac-network
     healthcheck:
-      test: ["CMD", "radtest", "test", "test", "localhost", "0", "${RADIUS_SECRET}"]
+      test: ["CMD", "radtest", "test", "test123", "localhost", "0", "${RADIUS_SECRET}"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -85,7 +86,7 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - SECRET_KEY=${API_SECRET_KEY}
     volumes:
-      -./api:/app
+      - ./api:/app:delegated  
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,6 +100,7 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
+
 volumes:
   postgres-data:
     driver: local
