@@ -34,11 +34,11 @@ CREATE TABLE IF NOT EXISTS radusergroup (
     priority INTEGER NOT NULL DEFAULT 1
 );
 
--- 5. Accounting (Oturum Kayıtları) - TÜM EKSİK SÜTUNLAR VE UNIQUE CONSTRAINT DAHİL
+-- 5. Accounting (Oturum Kayıtları) 
 CREATE TABLE IF NOT EXISTS radacct (
     radacctid BIGSERIAL PRIMARY KEY,
     acctsessionid VARCHAR(64) NOT NULL DEFAULT '',
-    acctuniqueid VARCHAR(32) NOT NULL UNIQUE, -- Hata veren kritik unique kısıtlaması burada!
+    acctuniqueid VARCHAR(32) NOT NULL UNIQUE, 
     username VARCHAR(64) NOT NULL DEFAULT '',
     groupname VARCHAR(64) NOT NULL DEFAULT '',
     realm VARCHAR(64) DEFAULT '',
@@ -46,26 +46,26 @@ CREATE TABLE IF NOT EXISTS radacct (
     nasportid VARCHAR(15) DEFAULT NULL,
     nasporttype VARCHAR(32) DEFAULT NULL,
     acctstarttime TIMESTAMP WITH TIME ZONE,
-    acctupdatetime TIMESTAMP WITH TIME ZONE, -- Eksik olan sütun 1
+    acctupdatetime TIMESTAMP WITH TIME ZONE, 
     acctstoptime TIMESTAMP WITH TIME ZONE,
     acctinterval BIGINT,
     acctsessiontime BIGINT,
-    acctauthentic VARCHAR(32),                -- Eksik olan sütun 2
-    connectinfo_start VARCHAR(50),            -- Eksik olan sütun 3
-    connectinfo_stop VARCHAR(50),             -- Eksik olan sütun 4
+    acctauthentic VARCHAR(32),                
+    connectinfo_start VARCHAR(50),            
+    connectinfo_stop VARCHAR(50),             
     acctterminatecause VARCHAR(32) DEFAULT '',
     acctstatustype VARCHAR(32) DEFAULT '',
     acctinputoctets BIGINT,
     acctoutputoctets BIGINT,
     calledstationid VARCHAR(50) NOT NULL DEFAULT '',
     callingstationid VARCHAR(50) NOT NULL DEFAULT '',
-    servicetype VARCHAR(32),                  -- Eksik olan sütun 5
-    framedprotocol VARCHAR(32),               -- Eksik olan sütun 6
+    servicetype VARCHAR(32),                  
+    framedprotocol VARCHAR(32),               
     framedipaddress INET DEFAULT NULL,
-    framedipv6address INET,                   -- Eksik olan sütun 7
-    framedipv6prefix INET,                    -- Eksik olan sütun 8
-    framedinterfaceid VARCHAR(44),            -- Eksik olan sütun 9
-    delegatedipv6prefix INET                  -- Eksik olan sütun 10
+    framedipv6address INET,                   
+    framedipv6prefix INET,                   
+    framedinterfaceid VARCHAR(44),           
+    delegatedipv6prefix INET                  
 );
 
 -- 6. Post-Auth Logları (Giriş Denemeleri)
@@ -86,9 +86,7 @@ CREATE TABLE IF NOT EXISTS mac_auth (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
----------------------------------------------------------
 -- OTOMATİK TEST VERİLERİ
----------------------------------------------------------
 
 -- Kullanıcılar
 INSERT INTO radcheck (username, attribute, op, value) VALUES

@@ -73,6 +73,49 @@ def get_redis_client():
 async def root():
     return {"message": "NAC Policy Engine is running"}
 
+class EventRequest(BaseModel):
+    username: str
+
+@app.post("/auth-fail")
+async def auth_fail(request: EventRequest):
+    """Başarısız giriş - sayaç artır"""
+    if request.username:
+        redis_client = get_redis_client()
+        if redis_client:
+            redis_client.incr(f"retry:{request.username}")
+            redis_client.expire(f"retry:{request.username}", 600)
+    return {"status": "ok"}
+
+@app.post("/auth-success")
+async def auth_success(request: EventRequest):
+    """Başarılı giriş - sayaç sil"""
+    if request.username:
+        redis_client = get_redis_client()
+        if redis_client:
+            redis_client.delete(f"retry:{request.username}")
+    return {"status": "ok"}
+
+# Hatalı girişi sayan ve 5 denemeden sonra 10 dk bloklayan mantık
+@app.get("/auth-check")
+async def auth_check(username: str):
+    redis_client = get_redis_client()
+    if redis_client:
+        retry_count = redis_client.get(f"retry:{username}")
+        if retry_count and int(retry_count) > 5:
+            raise HTTPException(status_code=429, detail="Too many failed attempts")
+    return {"status": "ok"}
+    
+@app.get("/auth-check")
+async def auth_check(username: str):
+    """Rate limiting kontrolü"""
+    redis_client = get_redis_client()
+    if redis_client:
+        retry_count = redis_client.get(f"retry:{username}")
+        if retry_count and int(retry_count) > 5:
+            raise HTTPException(status_code=429, detail="Too many failed attempts")
+    return {"status": "ok"}
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
@@ -107,16 +150,25 @@ async def accounting(request: AccountingRequest):
                     redis_client.expire(f"session:{request.session_id}", 86400)
                 
             elif request.status_type == "Stop":
-                await conn.execute("""
-                    UPDATE radacct 
-                    SET acctstoptime = NOW(),
-                        acctsessiontime = $1,
-                        acctterminatecause = 'User-Request'
-                    WHERE acctsessionid = $2
-                """, request.session_time, request.session_id)
-                
+                # Veritabanını güncelle
+                try:
+                    # session_time string olarak gelebileceği için int'e zorluyoruz
+                    s_time = int(request.session_time) if request.session_time and str(request.session_time).isdigit() else 0
+                    
+                    await conn.execute("""
+                        UPDATE radacct 
+                        SET acctstoptime = NOW(),
+                            acctsessiontime = $1,
+                            acctterminatecause = 'User-Request'
+                        WHERE acctsessionid = $2 AND acctstoptime IS NULL
+                    """, s_time, request.session_id)
+                except Exception as db_e:
+                    logger.error(f"DB update error during stop: {db_e}")
+
+                # VERİTABANI HATASI OLSA BİLE REDIS'TEN SİL (Kritik Değişiklik)
                 if redis_client:
                     redis_client.delete(f"session:{request.session_id}")
+                    logger.info(f"Redis session deleted: {request.session_id}")
             
             return {"result": "success", "message": "Recorded"}
             

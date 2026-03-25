@@ -8,6 +8,7 @@ services:
   postgres:
     image: postgres:18-alpine
     container_name: nac-postgres
+    env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -46,6 +47,7 @@ services:
   freeradius:
     image: freeradius/freeradius-server:latest-3.2
     container_name: nac-freeradius
+    env_file: .env
     platform: linux/amd64
     command: freeradius -X -f
     ports:
@@ -79,6 +81,7 @@ services:
   api:
     build: ./api
     container_name: nac-api
+    env_file: .env
     ports:
       - "${API_PORT}:8000"
     environment:

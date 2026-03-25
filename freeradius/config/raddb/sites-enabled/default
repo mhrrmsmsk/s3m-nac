@@ -1,1 +1,84 @@
-/etc/freeradius/sites-available/default
+server default {
+    listen {
+        type = auth
+        ipaddr = *
+        port = 0
+    }
+    listen {
+        type = acct
+        ipaddr = *
+        port = 0
+    }
+
+    authorize {
+        auth_check
+        if (reject) {
+            update reply {
+                Reply-Message := "Cok fazla hatali giris denemesi. 10 dakika engellendiniz."
+            }
+            reject
+        }
+        filter_username
+        preprocess
+        chap
+        mschap
+        digest
+        suffix
+        eap {
+            ok = return
+        }
+        files
+        sql
+        expiration
+        logintime
+        pap
+    }
+
+    authenticate {
+        Auth-Type PAP {
+            pap
+        }
+        Auth-Type CHAP {
+            chap
+        }
+        Auth-Type MS-CHAP {
+            mschap
+        }
+        eap
+    }
+
+    preacct {
+        preprocess
+        acct_unique
+        suffix
+        files
+    }
+
+    accounting {
+        detail
+        unix
+        sql
+        exec
+        attr_filter.accounting_response
+    }
+
+    session {
+        sql
+    }
+
+    post-auth {
+        auth_success
+
+        sql
+        exec
+        remove_reply_message_if_eap
+
+        Post-Auth-Type REJECT {
+            rest.auth_fail
+            sql
+            attr_filter.access_reject
+            eap
+            remove_reply_message_if_eap
+        }
+    }
+}
