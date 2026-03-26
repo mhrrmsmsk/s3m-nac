@@ -11,7 +11,6 @@ server default {
     }
 
     authorize {
-        auth_check
         if (reject) {
             update reply {
                 Reply-Message := "Cok fazla hatali giris denemesi. 10 dakika engellendiniz."
@@ -55,6 +54,7 @@ server default {
     }
 
     accounting {
+        rest
         detail
         unix
         sql
@@ -68,13 +68,11 @@ server default {
 
     post-auth {
         auth_success
-
         sql
         exec
         remove_reply_message_if_eap
 
         Post-Auth-Type REJECT {
-            rest.auth_fail
             sql
             attr_filter.access_reject
             eap

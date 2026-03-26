@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAC Policy Engine Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col">
+    <nav class="bg-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <svg class="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <h1 class="text-2xl font-bold tracking-wider">NAC Policy Engine</h1>
+            </div>
+            <div class="text-sm bg-indigo-800 px-4 py-2 rounded-full flex items-center shadow-inner border border-indigo-600">
+                <span class="mr-2 font-medium">API Bağlantısı:</span> 
+                <span id="status-dot" class="text-red-400 text-lg leading-none">●</span>
+                <span id="status-text" class="ml-1 text-indigo-200">Bekleniyor...</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6 mt-4 flex-grow">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest">Kayıtlı Kullanıcı</h3>
+                    <p id="total-users" class="text-4xl font-black text-gray-800 mt-2">0</p>
+                </div>
+                <div class="p-3 bg-indigo-50 rounded-full text-indigo-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest">Aktif Oturumlar</h3>
+                    <p id="session-count" class="text-4xl font-black text-gray-800 mt-2">0</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded-full text-green-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest">Sistem Altyapısı</h3>
+                    <p class="text-lg font-bold text-gray-800 mt-2">Redis & Postgres</p>
+                    <p class="text-xs text-gray-400 mt-1">Zero-Touch NAC Aktif</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-full text-blue-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-700">📡 Canlı Ağ Oturumları</h2>
+                    <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Gerçek Zamanlı</span>
+                </div>
+                <div class="p-0 flex-grow">
+                    <table class="min-w-full leading-normal">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3 text-left font-bold">Kullanıcı/MAC</th>
+                                <th class="px-6 py-3 text-left font-bold">Session ID</th>
+                                <th class="px-6 py-3 text-left font-bold">Zaman</th>
+                            </tr>
+                        </thead>
+                        <tbody id="session-table-body" class="divide-y divide-gray-100 text-sm">
+                            <tr><td colspan="3" class="text-center py-8 text-gray-400">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-700">👥 Kimlik & Politika Veritabanı</h2>
+                    <span class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">PostgreSQL</span>
+                </div>
+                <div class="p-0 flex-grow">
+                    <table class="min-w-full leading-normal">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3 text-left font-bold">Kimlik</th>
+                                <th class="px-6 py-3 text-center font-bold">Durum</th>
+                                <th class="px-6 py-3 text-right font-bold">Politika Denetimi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="divide-y divide-gray-100 text-sm">
+                            <tr><td colspan="3" class="text-center py-8 text-gray-400">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('tr-TR') + ' <span class="text-gray-400 text-xs block">' + date.toLocaleDateString('tr-TR') + '</span>';
+        }
+
+        async function fetchSessions() {
+            try {
+                const response = await fetch(`${API_URL}/sessions/active`);
+                if(response.ok) {
+                    document.getElementById('status-dot').className = "text-green-400 text-lg leading-none animate-pulse";
+                    document.getElementById('status-text').innerText = "Bağlı";
+                }
+                const data = await response.json();
+                
+                document.getElementById('session-count').innerText = data.count || 0;
+                const tbody = document.getElementById('session-table-body');
+                tbody.innerHTML = '';
+
+                if (!data.sessions || data.sessions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-10 text-center text-gray-400 font-medium">Ağda aktif cihaz yok.</td></tr>`;
+                    return;
+                }
+
+                data.sessions.forEach(session => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-3 whitespace-nowrap font-bold text-gray-800">${session.username}</td>
+                            <td class="px-6 py-3 whitespace-nowrap font-mono text-xs text-gray-500 bg-gray-50">${session.session_id}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">${formatDate(session.start_time)}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                document.getElementById('status-dot').className = "text-red-500 text-lg leading-none";
+                document.getElementById('status-text').innerText = "Bağlantı Yok";
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const response = await fetch(`${API_URL}/users`);
+                const data = await response.json();
+                
+                document.getElementById('total-users').innerText = data.total_users || 0;
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = '';
+
+                if (!data.users || data.users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-10 text-center text-gray-400">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
+                    return;
+                }
+
+                data.users.forEach(user => {
+                    const isOnline = user.status === "Online";
+                    const statusBadge = isOnline 
+                        ? `<span class="px-2 py-1 inline-flex text-xs leading-5 font-bold rounded text-green-800 bg-green-100"><span class="w-2 h-2 rounded-full bg-green-500 mr-1 mt-1 animate-pulse"></span>Aktif</span>`
+                        : `<span class="px-2 py-1 inline-flex text-xs leading-5 font-bold rounded text-gray-500 bg-gray-100">Çevrimdışı</span>`;
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-700">${user.username}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">${statusBadge}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <button onclick="checkPolicy('${user.username}')" class="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded hover:bg-indigo-600 hover:text-white transition-colors">
+                                    Politikayı Gör
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Users API Hatası", error);
+            }
+        }
+
+        async function checkPolicy(username) {
+            try {
+                const response = await fetch(`${API_URL}/authorize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, nas_ip: "127.0.0.1" })
+                });
+                
+                const data = await response.json();
+                
+                // Gelen policy JSON'ını güzel bir formatta alert veya ekranda gösterelim
+                let message = `${username} kullanıcısı için RADIUS Dönüş (Reply) Atribütleri:\n\n`;
+                for (const [key, value] of Object.entries(data)) {
+                    message += `► ${key.replace('reply:', '')} = ${value}\n`;
+                }
+                
+                alert(message);
+            } catch (error) {
+                alert("Politika çekilirken hata oluştu. API çalışıyor mu?");
+            }
+        }
+
+        fetchSessions();
+        fetchUsers();
+        
+        setInterval(() => {
+            fetchSessions();
+            fetchUsers();
+        }, 2000);
+    </script>
+</body>
+</html>

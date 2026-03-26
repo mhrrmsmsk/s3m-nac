@@ -1,16 +1,9 @@
-rest auth_check {
-    connect_uri = "http://api:8000"
-    uri = "${connect_uri}/auth-check?username=%{User-Name}"
-    method = "get"
-}
-
-
 rest auth_fail {
     connect_uri = "http://api:8000"
     uri = "${connect_uri}/auth-fail"
     method = "post"
     body = "json"
-    data = "{"username":"%{User-Name}"}"
+    data = "{\"username\":\"%{User-Name}\"}"
 }
 
 rest auth_success {
@@ -18,7 +11,7 @@ rest auth_success {
     uri = "${connect_uri}/auth-success"
     method = "post"
     body = "json"
-    data = "{"username":"%{User-Name}"}"
+    data = "{\"username\":\"%{User-Name}\"}"
 }
 
 rest {
@@ -34,6 +27,6 @@ rest {
         uri = "${..connect_uri}/accounting"
         method = "post"
         body = "json"
-        data = "{"username":"%{User-Name}","session_id":"%{Acct-Session-Id}","status_type":"%{Acct-Status-Type}","nas_ip":"%{NAS-IP-Address}","session_time":"%{%{Acct-Session-Time}:-0}"}"
+        data = "{\"username\":\"%{User-Name}\",\"session_id\":\"%{Acct-Session-Id}\",\"status_type\":\"%{Acct-Status-Type}\",\"nas_ip\":\"%{NAS-IP-Address}\",\"session_time\":\"%{%{Acct-Session-Time}:-0}\"}"
     }
 }

@@ -1,4 +1,4 @@
--- 1. Kimlik Doğrulama (Şifreler)
+-- Kimlik Doğrulama (Şifreler)
 CREATE TABLE IF NOT EXISTS radcheck (
     id SERIAL PRIMARY KEY,
     username VARCHAR(64) NOT NULL DEFAULT '',
@@ -8,7 +8,17 @@ CREATE TABLE IF NOT EXISTS radcheck (
 );
 CREATE INDEX IF NOT EXISTS radcheck_username_idx ON radcheck (username);
 
--- 2. Grup Kontrol (FreeRADIUS'un hata verdiği tablo)
+-- Response table
+CREATE TABLE IF NOT EXISTS radreply (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(64) NOT NULL DEFAULT '',
+    attribute VARCHAR(64) NOT NULL DEFAULT '',
+    op VARCHAR(2) NOT NULL DEFAULT '=',
+    value VARCHAR(253) NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS radreply_username_idx ON radreply (username);
+
+--  Grup Kontrol
 CREATE TABLE IF NOT EXISTS radgroupcheck (
     id SERIAL PRIMARY KEY,
     groupname VARCHAR(64) NOT NULL DEFAULT '',
@@ -16,6 +26,7 @@ CREATE TABLE IF NOT EXISTS radgroupcheck (
     op VARCHAR(2) NOT NULL DEFAULT '==',
     value VARCHAR(253) NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS radgroupcheck_groupname_idx ON radgroupcheck (groupname);
 
 -- 3. Grup Yetki (VLAN Atamaları)
 CREATE TABLE IF NOT EXISTS radgroupreply (
@@ -25,6 +36,7 @@ CREATE TABLE IF NOT EXISTS radgroupreply (
     op VARCHAR(2) NOT NULL DEFAULT '=',
     value VARCHAR(253) NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS radgroupreply_groupname_idx ON radgroupreply (groupname);
 
 -- 4. Kullanıcı-Grup İlişkisi
 CREATE TABLE IF NOT EXISTS radusergroup (
@@ -33,6 +45,7 @@ CREATE TABLE IF NOT EXISTS radusergroup (
     groupname VARCHAR(64) NOT NULL DEFAULT '',
     priority INTEGER NOT NULL DEFAULT 1
 );
+CREATE INDEX IF NOT EXISTS radusergroup_username_idx ON radusergroup (username);
 
 -- 5. Accounting (Oturum Kayıtları) 
 CREATE TABLE IF NOT EXISTS radacct (
@@ -77,37 +90,26 @@ CREATE TABLE IF NOT EXISTS radpostauth (
     authdate TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- 7. Senin Özel MAB Tablon
-CREATE TABLE IF NOT EXISTS mac_auth (
-    id SERIAL PRIMARY KEY,
-    mac_address VARCHAR(17) UNIQUE NOT NULL,
-    device_name VARCHAR(64),
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- OTOMATİK TEST VERİLERİ
+-- Tabloları temizleme test için 
+--TRUNCATE TABLE radcheck, radusergroup, radgroupreply RESTART IDENTITY CASCADE;
 
 -- Kullanıcılar
 INSERT INTO radcheck (username, attribute, op, value) VALUES
 ('admin', 'MD5-Password', ':=', md5('admin123')),
 ('employee', 'MD5-Password', ':=', md5('emp123')),
-('AABBCCDDEEFF', 'Cleartext-Password', ':=', 'AABBCCDDEEFF')
-ON CONFLICT DO NOTHING;
+('AA-BB-CC-DD-EE-FF', 'Cleartext-Password', ':=', 'AA-BB-CC-DD-EE-FF');
 
 -- Gruplar
 INSERT INTO radusergroup (username, groupname) VALUES
 ('admin', 'admin_grp'),
 ('employee', 'emp_grp'),
-('AABBCCDDEEFF', 'emp_grp')
-ON CONFLICT DO NOTHING;
+('AA-BB-CC-DD-EE-FF', 'emp_grp');
 
 -- VLAN'lar
 INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES
-('admin_grp', 'Tunnel-Type', ':=', 'VLAN'),
-('admin_grp', 'Tunnel-Medium-Type', ':=', 'IEEE-802'),
-('admin_grp', 'Tunnel-Private-Group-Id', ':=', '100'),
-('emp_grp', 'Tunnel-Type', ':=', 'VLAN'),
-('emp_grp', 'Tunnel-Medium-Type', ':=', 'IEEE-802'),
-('emp_grp', 'Tunnel-Private-Group-Id', ':=', '200')
-ON CONFLICT DO NOTHING;
+('admin_grp', 'Tunnel-Type', '=', 'VLAN'),
+('admin_grp', 'Tunnel-Medium-Type', '=', 'IEEE-802'),
+('admin_grp', 'Tunnel-Private-Group-Id', '=', '100'),
+('emp_grp', 'Tunnel-Type', '=', 'VLAN'),
+('emp_grp', 'Tunnel-Medium-Type', '=', 'IEEE-802'),
+('emp_grp', 'Tunnel-Private-Group-Id', '=', '200');

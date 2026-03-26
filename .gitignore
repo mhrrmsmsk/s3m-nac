@@ -3,6 +3,5 @@ __pycache__
 *.pyc
 postgres-data/
 redis-data/
-.pytest_cache
 
 
