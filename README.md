@@ -1,4 +1,4 @@
-# S3M NAC (Network Access Control) Policy Engine
+# NAC (Network Access Control) Policy Engine
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com/)
