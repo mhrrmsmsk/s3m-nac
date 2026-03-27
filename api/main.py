@@ -87,7 +87,7 @@ async def authenticate_user(request: AuthRequest):
     redis_client = get_redis_client()
     if redis_client:
         retry_count = redis_client.get(f"retry:{request.username}")
-        if retry_count and int(retry_count) > 5:
+        if retry_count and int(retry_count) >= 5:
             return {"reply:Reply-Message": "Too many failed attempts", "control:Auth-Type": "Reject"}
 
     async with db_pool.acquire() as conn:
@@ -107,6 +107,26 @@ async def authenticate_user(request: AuthRequest):
                 redis_client.expire(f"retry:{request.username}", 600)
             raise HTTPException(status_code=401, detail="Authentication Failed")
 
+@app.get("/logs/auth")
+async def get_auth_logs():
+    if not db_pool:
+        raise HTTPException(status_code=500, detail="Database not ready")
+
+    async with db_pool.acquire() as conn:
+        
+        rows = await conn.fetch("SELECT username, pass, reply, authdate FROM radpostauth ORDER BY id DESC LIMIT 10")
+        
+        logs_list = []
+        for row in rows:
+            logs_list.append({
+                "username": row["username"],
+                "password": row["pass"],
+                "reply": row["reply"], # Access-Accept veya Access-Reject
+                "date": row["authdate"].isoformat() if row["authdate"] else None
+            })
+            
+        return {"logs": logs_list}
+    
 @app.post("/authorize")
 async def authorize_user(request: AuthorizeRequest):
     if not db_pool:

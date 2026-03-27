@@ -54,11 +54,10 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full">
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
                     <h2 class="text-lg font-bold text-gray-700">📡 Canlı Ağ Oturumları</h2>
-                    <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Gerçek Zamanlı</span>
+                    <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Redis Cache</span>
                 </div>
                 <div class="p-0 flex-grow">
                     <table class="min-w-full leading-normal">
@@ -96,7 +95,31 @@
                     </table>
                 </div>
             </div>
+        </div>
 
+        <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <h2 class="text-lg font-bold text-gray-700">Güvenlik Logları (Ağ Giriş Denemeleri)</h2>
+                </div>
+                <span class="text-xs font-bold bg-gray-200 text-gray-700 px-2 py-1 rounded">Son 10 İşlem</span>
+            </div>
+            <div class="p-0 overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="px-6 py-3 text-left font-bold">Kullanıcı / Cihaz</th>
+                            <th class="px-6 py-3 text-left font-bold">Denenen Şifre</th>
+                            <th class="px-6 py-3 text-left font-bold">RADIUS Kararı</th>
+                            <th class="px-6 py-3 text-left font-bold">Tarih / Saat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body" class="divide-y divide-gray-100 text-sm">
+                        <tr><td colspan="4" class="text-center py-8 text-gray-400">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -104,6 +127,7 @@
         const API_URL = "http://localhost:8000";
 
         function formatDate(isoString) {
+            if(!isoString) return "-";
             const date = new Date(isoString);
             return date.toLocaleTimeString('tr-TR') + ' <span class="text-gray-400 text-xs block">' + date.toLocaleDateString('tr-TR') + '</span>';
         }
@@ -178,6 +202,40 @@
             }
         }
 
+        // YENİ: Logları Çeken Fonksiyon
+        async function fetchAuthLogs() {
+            try {
+                const response = await fetch(`${API_URL}/logs/auth`);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('logs-table-body');
+                tbody.innerHTML = '';
+
+                if (!data.logs || data.logs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-10 text-center text-gray-400">Henüz giriş denemesi yok.</td></tr>`;
+                    return;
+                }
+
+                data.logs.forEach(log => {
+                    const isAccept = log.reply === "Access-Accept";
+                    const replyBadge = isAccept 
+                        ? `<span class="px-2 py-1 text-xs font-bold rounded text-green-700 bg-green-100 border border-green-200">${log.reply}</span>`
+                        : `<span class="px-2 py-1 text-xs font-bold rounded text-red-700 bg-red-100 border border-red-200">${log.reply}</span>`;
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-3 whitespace-nowrap font-bold text-gray-700">${log.username}</td>
+                            <td class="px-6 py-3 whitespace-nowrap font-mono text-xs text-gray-500">${log.password}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">${replyBadge}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">${formatDate(log.date)}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Log API Hatası", error);
+            }
+        }
+
         async function checkPolicy(username) {
             try {
                 const response = await fetch(`${API_URL}/authorize`, {
@@ -188,7 +246,6 @@
                 
                 const data = await response.json();
                 
-                // Gelen policy JSON'ını güzel bir formatta alert veya ekranda gösterelim
                 let message = `${username} kullanıcısı için RADIUS Dönüş (Reply) Atribütleri:\n\n`;
                 for (const [key, value] of Object.entries(data)) {
                     message += `► ${key.replace('reply:', '')} = ${value}\n`;
@@ -200,12 +257,16 @@
             }
         }
 
+        // Sayfa açıldığında tüm fonksiyonları çağır
         fetchSessions();
         fetchUsers();
+        fetchAuthLogs();
         
+        // Tabloları 2 saniyede bir otomatik güncelle
         setInterval(() => {
             fetchSessions();
             fetchUsers();
+            fetchAuthLogs();
         }, 2000);
     </script>
 </body>
